@@ -266,4 +266,7 @@ def api_share_excel_whatsapp():
     })
 
 if __name__ == '__main__':
-    app.run(debug=True, host='127.0.0.1', port=5000)
+    import os
+    debug_mode = os.getenv('FLASK_ENV', 'development') == 'development'
+    port = int(os.getenv('PORT', 5000))
+    app.run(debug=debug_mode, host='0.0.0.0', port=port)
