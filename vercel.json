@@ -1,8 +1,5 @@
 {
   "buildCommand": "pip install -r requirements.txt",
-  "outputDirectory": ".",
-  "installCommand": "pip install --no-cache-dir -r requirements.txt",
-  "env": {
-    "PYTHONUNBUFFERED": "1"
-  }
+  "framework": "flask",
+  "skipBuildStep": false
 }

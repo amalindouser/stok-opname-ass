@@ -204,13 +204,63 @@ Edit di `app.py` baris terakhir:
 app.run(debug=True, host='0.0.0.0', port=8000)  # Akses dari device lain
 ```
 
-## Deployment (Optional)
+## Deployment
 
-Untuk production, gunakan server seperti Gunicorn:
+### Opsi 1: Heroku (Recommended)
+```bash
+# Login & create app
+heroku login
+heroku create nama-app-anda
+
+# Deploy
+git push heroku main
+
+# Lihat logs
+heroku logs --tail
+```
+
+### Opsi 2: Railway
+1. Go to https://railway.app
+2. New Project → GitHub
+3. Select repository → Deploy otomatis
+
+### Opsi 3: Render
+1. Go to https://render.com
+2. New → Web Service
+3. Select GitHub repo → Deploy
+
+### Opsi 4: Docker (Local atau Cloud)
+```bash
+# Build image
+docker build -t stock-opname .
+
+# Run container
+docker run -p 5000:5000 -v $(pwd)/data:/app/data stock-opname
+```
+
+### Opsi 5: Docker Compose
+```bash
+docker-compose up
+```
+
+### Production dengan Gunicorn
 ```bash
 pip install gunicorn
 gunicorn -w 4 -b 0.0.0.0:5000 app.py
 ```
+
+## Troubleshooting Deployment
+
+**Error: pyodbc not found**
+- Pastikan tidak ada import pyodbc di kode
+- requirements.txt hanya berisi: Flask, Werkzeug, openpyxl
+
+**File Excel tidak tersimpan di cloud**
+- Gunakan persistent storage (Heroku Dyno, Railway volume, dll)
+- Atau simpan ke cloud storage (AWS S3, Google Cloud Storage)
+
+**Port conflict**
+- Edit PORT di app.py atau set env variable PORT=8000
 
 ## License
 
