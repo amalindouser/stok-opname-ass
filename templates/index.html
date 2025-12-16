@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Opname - Input Data</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            padding: 30px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .card h2 {
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-size: 20px;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        input[type="text"]:disabled {
+            background: #f5f5f5;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        input[type="text"]:invalid,
+        input[type="text"].error {
+            border-color: #ef4444 !important;
+            background: #fef2f2 !important;
+        }
+
+        input[type="text"].success {
+            border-color: #22c55e !important;
+            background: #f0fdf4 !important;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(37, 99, 235, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .alert-error {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+
+        .alert-success {
+            background: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+        }
+
+        .alert-info {
+            background: #eef;
+            color: #33c;
+            border: 1px solid #ccf;
+        }
+
+        .table-section {
+            grid-column: 1 / -1;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        table thead {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            color: white;
+        }
+
+        table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        table tbody tr:hover {
+            background: #f9f9f9;
+        }
+
+        .btn-hapus {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            padding: 6px 12px;
+            font-size: 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-hapus:hover {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+        }
+
+        .no-data {
+            text-align: center;
+            color: #999;
+            padding: 40px 20px;
+            font-style: italic;
+        }
+
+        .footer-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .btn-export {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 12px 30px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-export:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-reset {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            padding: 12px 30px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-reset:hover {
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(245, 158, 11, 0.4);
+        }
+
+        .btn-share {
+            color: white;
+            padding: 12px 30px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: linear-gradient(135deg, #25D366 0%, #1fac4d 100%);
+        }
+
+        .btn-share:hover {
+            background: linear-gradient(135deg, #1fac4d 0%, #188f44 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(37, 211, 102, 0.4);
+        }
+
+        .btn-loading {
+            opacity: 0.7;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #2563eb;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1);
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            header h1 {
+                font-size: 24px;
+            }
+
+            table {
+                font-size: 12px;
+            }
+
+            table th, table td {
+                padding: 8px 10px;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-actions {
+                flex-direction: column;
+            }
+
+            .btn-export, .btn-reset {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📦 Stock Opname</h1>
+            <p>Sistem input data stock opname sederhana</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Form Input -->
+            <div class="card">
+                <h2>Form Input</h2>
+                
+                <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 15px; margin-bottom: 20px; color: #92400e;">
+                    <div style="font-weight: 700; margin-bottom: 8px; font-size: 14px;">⚠️ PERHATIAN PENTING:</div>
+                    <ul style="margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6;">
+                        <li>Ketik <strong>KODE BARANG dengan TELITI</strong></li>
+                        <li>Nama barang akan muncul otomatis dari sistem</li>
+                        <li>Jika nama tidak muncul = KODE SALAH</li>
+                        <li>Cek ulang sebelum klik TAMBAH</li>
+                    </ul>
+                </div>
+                
+                <div id="message"></div>
+
+                <div class="form-group">
+                    <label for="namaArea">Nama Area / Warehouse *</label>
+                    <input 
+                        type="text" 
+                        id="namaArea" 
+                        placeholder="Contoh: Area Utama, Gudang B"
+                        autocomplete="off"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="kodeBarang">Kode Barang *</label>
+                    <input 
+                        type="text" 
+                        id="kodeBarang" 
+                        placeholder="Contoh: BRG001"
+                        autocomplete="off"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="namaBarang">Nama Barang (Otomatis)</label>
+                    <input 
+                        type="text" 
+                        id="namaBarang" 
+                        disabled
+                        placeholder="Akan muncul otomatis"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="stokReal">Stok Real (Jumlah) *</label>
+                    <input 
+                        type="number" 
+                        id="stokReal" 
+                        placeholder="0"
+                        min="0"
+                    >
+                </div>
+
+                <div class="button-group">
+                    <button class="btn-primary" id="btnTambah" onclick="tambahData()">Tambah</button>
+                    <button class="btn-secondary" onclick="resetForm()">Reset</button>
+                </div>
+            </div>
+
+            <!-- Statistik -->
+            <div class="card">
+                <h2>Statistik</h2>
+                
+                <div class="stats">
+                    <div class="stat-box">
+                        <div class="stat-label">Total Item</div>
+                        <div class="stat-value" id="totalItem">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Total Stok</div>
+                        <div class="stat-value" id="totalStok">0</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Master Barang Tersedia</label>
+                    <select id="masterBarangList" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                        <option value="">-- Pilih dari Master --</option>
+                    </select>
+                </div>
+
+                <button class="btn-primary" onclick="autoFillFromMaster()" style="width: 100%; margin-top: 10px;">
+                    Auto Fill Kode
+                </button>
+            </div>
+
+            <!-- Tabel Data -->
+            <div class="card table-section">
+                <h2>Data Input SO</h2>
+                
+                <table id="dataTable">
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>Kode Barang</th>
+                            <th>Nama Barang</th>
+                            <th>Stok Real</th>
+                            <th>Area</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr>
+                            <td colspan="6" class="no-data">Belum ada data. Silakan tambahkan data di atas.</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="footer-actions">
+                    <button class="btn-reset" onclick="resetSemua()">Reset Semua</button>
+                    <button class="btn-export" id="btnExport" onclick="exportExcel()">📥 Export & Kirim WA</button>
+                    <button class="btn-share" id="btnShareWA" onclick="shareExcelWhatsapp()">📱 Share ke WA</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let masterBarang = {};
+
+        // Load master barang saat halaman dimuat
+        async function loadMasterBarang() {
+            try {
+                const response = await fetch('/api/master-barang');
+                masterBarang = await response.json();
+                
+                // Populate select dropdown
+                const select = document.getElementById('masterBarangList');
+                Object.keys(masterBarang).sort().forEach(kode => {
+                    const option = document.createElement('option');
+                    option.value = kode;
+                    option.textContent = `${kode} - ${masterBarang[kode]}`;
+                    select.appendChild(option);
+                });
+
+                loadDaftarSO();
+            } catch (error) {
+                showMessage('Error memuat master barang: ' + error.message, 'error');
+            }
+        }
+
+        // Tampilkan pesan
+        function showMessage(text, type = 'info') {
+            const messageDiv = document.getElementById('message');
+            messageDiv.innerHTML = `<div class="alert alert-${type}">${text}</div>`;
+            setTimeout(() => {
+                messageDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        // Validasi kode barang saat input blur
+        document.getElementById('kodeBarang').addEventListener('blur', async function() {
+            const kode = this.value.trim().toUpperCase();
+            const namaBarangField = document.getElementById('namaBarang');
+            
+            // Normalize input
+            if (kode !== this.value) {
+                this.value = kode;
+            }
+            
+            if (!kode) {
+                namaBarangField.value = '';
+                namaBarangField.style.background = '#fff';
+                namaBarangField.style.borderColor = '#e0e0e0';
+                return;
+            }
+
+            if (masterBarang[kode]) {
+                namaBarangField.value = masterBarang[kode];
+                namaBarangField.style.background = '#f0fdf4';
+                namaBarangField.style.borderColor = '#22c55e';
+                showMessage(`✓ Kode ${kode} ditemukan: ${masterBarang[kode]}`, 'success');
+            } else {
+                namaBarangField.value = '';
+                namaBarangField.style.background = '#fef2f2';
+                namaBarangField.style.borderColor = '#ef4444';
+                showMessage(`⚠️ PERINGATAN: Kode "${kode}" TIDAK DITEMUKAN di master barang. Cek ulang kode Anda!`, 'error');
+            }
+        });
+
+        // Real-time validation saat typing
+        document.getElementById('kodeBarang').addEventListener('input', function() {
+            const kode = this.value.trim().toUpperCase();
+            const namaBarangField = document.getElementById('namaBarang');
+            
+            if (!kode) {
+                namaBarangField.style.background = '#fff';
+                namaBarangField.style.borderColor = '#e0e0e0';
+                namaBarangField.value = '';
+            }
+        });
+
+        // Auto fill dari dropdown
+        function autoFillFromMaster() {
+            const select = document.getElementById('masterBarangList');
+            if (!select.value) {
+                showMessage('Pilih kode barang dari dropdown', 'info');
+                return;
+            }
+            document.getElementById('kodeBarang').value = select.value;
+            document.getElementById('namaBarang').value = masterBarang[select.value];
+            document.getElementById('stokReal').focus();
+        }
+
+        // Set loading state pada button
+        function setButtonLoading(btnId, isLoading) {
+            const btn = document.getElementById(btnId);
+            if (isLoading) {
+                btn.classList.add('btn-loading');
+                btn.innerHTML = '<span class="spinner"></span>Loading...';
+                btn.disabled = true;
+            } else {
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+                if (btnId === 'btnTambah') {
+                    btn.innerHTML = 'Tambah';
+                } else if (btnId === 'btnExport') {
+                    btn.innerHTML = '📥 Export & Kirim WA';
+                } else if (btnId === 'btnShareWA') {
+                    btn.innerHTML = '📱 Share ke WA';
+                }
+            }
+        }
+
+        // Tambah data
+        async function tambahData() {
+            const kode = document.getElementById('kodeBarang').value.trim().toUpperCase();
+            const namaBarang = document.getElementById('namaBarang').value.trim();
+            const stokReal = document.getElementById('stokReal').value.trim();
+            const namaArea = document.getElementById('namaArea').value.trim();
+
+            // Validasi
+            if (!namaArea) {
+                showMessage('❌ Nama area tidak boleh kosong', 'error');
+                document.getElementById('namaArea').focus();
+                return;
+            }
+
+            if (!kode) {
+                showMessage('❌ Kode barang tidak boleh kosong', 'error');
+                document.getElementById('kodeBarang').focus();
+                return;
+            }
+
+            // Validasi kode ada di master
+            if (!masterBarang[kode]) {
+                showMessage(`❌ KODE "${kode}" TIDAK DITEMUKAN! Silakan cek ulang atau pilih dari dropdown.`, 'error');
+                document.getElementById('kodeBarang').focus();
+                return;
+            }
+
+            if (!stokReal || isNaN(stokReal) || parseInt(stokReal) < 0) {
+                showMessage('❌ Stok real harus angka positif', 'error');
+                document.getElementById('stokReal').focus();
+                return;
+            }
+
+            // Konfirmasi sebelum submit
+            const confirmMsg = `
+📋 PERIKSA DATA SEBELUM SUBMIT:
+
+Area: ${namaArea}
+Kode: ${kode}
+Nama: ${namaBarang}
+Stok: ${stokReal} unit
+
+Apakah data sudah benar? Tekan OK untuk lanjut.
+            `;
+
+            if (!confirm(confirmMsg.trim())) {
+                showMessage('Data dibatalkan', 'info');
+                return;
+            }
+
+            try {
+                setButtonLoading('btnTambah', true);
+
+                const response = await fetch('/api/tambah-so', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        kode_barang: kode,
+                        nama_barang: namaBarang,
+                        stok_real: parseInt(stokReal),
+                        nama_area: namaArea
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage('Data berhasil ditambahkan', 'success');
+                    resetForm();
+                    loadDaftarSO();
+                } else {
+                    showMessage(result.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            } finally {
+                setButtonLoading('btnTambah', false);
+            }
+        }
+
+        // Reset form
+        function resetForm() {
+            document.getElementById('kodeBarang').value = '';
+            document.getElementById('namaBarang').value = '';
+            document.getElementById('stokReal').value = '';
+            document.getElementById('masterBarangList').value = '';
+            // Jangan reset namaArea (akan diisi untuk semua item)
+            document.getElementById('kodeBarang').focus();
+        }
+
+        // Load daftar SO
+        async function loadDaftarSO() {
+            try {
+                const response = await fetch('/api/daftar-so');
+                const data = await response.json();
+
+                const tableBody = document.getElementById('tableBody');
+                
+                if (data.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="6" class="no-data">Belum ada data. Silakan tambahkan data di atas.</td></tr>';
+                } else {
+                    tableBody.innerHTML = data.map((item, index) => `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td><strong>${item.kode_barang}</strong></td>
+                            <td>${item.nama_barang}</td>
+                            <td style="text-align: center;">${item.stok_real}</td>
+                            <td>${item.nama_area}</td>
+                            <td>
+                                <button class="btn-hapus" onclick="hapusData(${index})">Hapus</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+
+                updateStats(data);
+            } catch (error) {
+                showMessage('Error memuat data: ' + error.message, 'error');
+            }
+        }
+
+        // Hapus data
+        async function hapusData(index) {
+            if (!confirm('Yakin ingin menghapus data ini?')) return;
+
+            try {
+                const response = await fetch(`/api/hapus-so/${index}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    showMessage('Data berhasil dihapus', 'success');
+                    loadDaftarSO();
+                } else {
+                    showMessage(result.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        }
+
+        // Reset semua data
+        async function resetSemua() {
+            if (!confirm('Yakin ingin menghapus SEMUA data SO? Tindakan ini tidak dapat dibatalkan.')) return;
+
+            try {
+                const response = await fetch('/api/reset-so', {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    showMessage('Semua data berhasil direset', 'success');
+                    loadDaftarSO();
+                } else {
+                    showMessage(result.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        }
+
+        // Update statistik
+        function updateStats(data) {
+            const totalItem = data.length;
+            const totalStok = data.reduce((sum, item) => sum + item.stok_real, 0);
+            
+            document.getElementById('totalItem').textContent = totalItem;
+            document.getElementById('totalStok').textContent = totalStok;
+        }
+
+        // Export Excel + Auto Share ke WA
+        async function exportExcel() {
+            try {
+                setButtonLoading('btnExport', true);
+
+                // Step 1: Download Excel
+                const responseExcel = await fetch('/api/export-excel', {
+                    method: 'POST'
+                });
+
+                if (!responseExcel.ok) {
+                    const result = await responseExcel.json();
+                    showMessage(result.message, 'error');
+                    return;
+                }
+
+                const blob = await responseExcel.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const filename = responseExcel.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'hasil_so.xlsx';
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+
+                showMessage('File berhasil diunduh', 'success');
+
+                // Step 2: Auto send to WhatsApp
+                setTimeout(() => {
+                    shareToWhatsApp(filename);
+                }, 1000);
+
+            } catch (error) {
+                showMessage('Error export: ' + error.message, 'error');
+                setButtonLoading('btnExport', false);
+            }
+        }
+
+        // Helper: Share ke WhatsApp
+        async function shareToWhatsApp(filename) {
+            try {
+                const nomorWA = '+62 851-1731-0261';
+
+                const response = await fetch('/api/share-excel-whatsapp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        nomor: nomorWA
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    // Buka WhatsApp dengan pesan
+                    window.open(result.link, '_blank');
+                    showMessage(`Membuka WhatsApp untuk ${nomorWA}`, 'success');
+                }
+            } catch (error) {
+                console.log('WhatsApp share helper error:', error);
+            } finally {
+                setButtonLoading('btnExport', false);
+            }
+        }
+
+        // Share Excel ke WhatsApp
+        async function shareExcelWhatsapp() {
+            try {
+                setButtonLoading('btnShareWA', true);
+
+                // Nomor WhatsApp (bisa dikustomisasi)
+                const nomorWA = '+62 851-1731-0261';
+
+                const response = await fetch('/api/share-excel-whatsapp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        nomor: nomorWA
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    showMessage(result.message, 'error');
+                    return;
+                }
+
+                // Download file Excel
+                const responseExcel = await fetch('/api/export-excel', {
+                    method: 'POST'
+                });
+
+                const blob = await responseExcel.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = result.filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+
+                // Buka WhatsApp dengan pesan
+                setTimeout(() => {
+                    window.open(result.link, '_blank');
+                    showMessage(`File ${result.filename} siap dibagikan via WhatsApp`, 'success');
+                }, 500);
+
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            } finally {
+                setButtonLoading('btnShareWA', false);
+            }
+        }
+
+        // Share WhatsApp (untuk share text saja, deprecated)
+        async function shareWhatsapp() {
+            try {
+                const response = await fetch('/api/share-whatsapp', {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    showMessage(result.message, 'error');
+                    return;
+                }
+
+                // Buka WhatsApp dengan pesan
+                window.open(result.link, '_blank');
+                showMessage('Silakan pilih kontak untuk mengirim data SO', 'success');
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        }
+
+        // Load master saat halaman dimuat
+        window.addEventListener('DOMContentLoaded', loadMasterBarang);
+    </script>
+</body>
+</html>
