@@ -1,3 +1,4 @@
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -21,12 +22,27 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-.DS_Store
-.idea/
+MANIFEST
+
+# IDE
 .vscode/
+.idea/
 *.swp
 *.swo
 *~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
 .env
 .env.local
-data/
+.env.*.local
+
+# Vercel
+.vercel/
+
+# Excel files (jangan track generated files)
+data/*.xlsx
+!data/TB_BARANG.xlsx

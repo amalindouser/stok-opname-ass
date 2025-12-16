@@ -206,47 +206,50 @@ app.run(debug=True, host='0.0.0.0', port=8000)  # Akses dari device lain
 
 ## Deployment
 
-### Opsi 1: Heroku (Recommended)
+### ⭐ Vercel (Recommended)
+
+**Langkah cepat:**
+
+1. Push ke GitHub:
 ```bash
-# Login & create app
-heroku login
-heroku create nama-app-anda
-
-# Deploy
-git push heroku main
-
-# Lihat logs
-heroku logs --tail
+git add .
+git commit -m "Stock Opname App"
+git push origin main
 ```
 
-### Opsi 2: Railway
+2. Deploy ke Vercel:
+   - Buka https://vercel.com/dashboard
+   - Import project dari GitHub
+   - Click Deploy
+   - Done! URL: `https://catat-so.vercel.app`
+
+**Detail:** Lihat `DEPLOY_VERCEL.md`
+
+---
+
+### Opsi lain:
+
+#### Railway
 1. Go to https://railway.app
 2. New Project → GitHub
-3. Select repository → Deploy otomatis
+3. Select repository → Auto-deploy
 
-### Opsi 3: Render
-1. Go to https://render.com
-2. New → Web Service
-3. Select GitHub repo → Deploy
-
-### Opsi 4: Docker (Local atau Cloud)
+#### Heroku
 ```bash
-# Build image
-docker build -t stock-opname .
-
-# Run container
-docker run -p 5000:5000 -v $(pwd)/data:/app/data stock-opname
+heroku login
+heroku create nama-app-anda
+git push heroku main
 ```
 
-### Opsi 5: Docker Compose
+#### Docker (Local)
 ```bash
 docker-compose up
+# Akses: http://localhost:5000
 ```
 
-### Production dengan Gunicorn
+#### Production Gunicorn
 ```bash
-pip install gunicorn
-gunicorn -w 4 -b 0.0.0.0:5000 app.py
+gunicorn -w 4 -b 0.0.0.0:5000 wsgi:app
 ```
 
 ## Troubleshooting Deployment
