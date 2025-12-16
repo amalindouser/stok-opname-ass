@@ -383,10 +383,10 @@
                 <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 15px; margin-bottom: 20px; color: #92400e;">
                     <div style="font-weight: 700; margin-bottom: 8px; font-size: 14px;">⚠️ PERHATIAN PENTING:</div>
                     <ul style="margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6;">
-                        <li>Ketik <strong>KODE BARANG dengan TELITI</strong></li>
-                        <li>Nama barang akan muncul otomatis dari sistem</li>
+                        <li>Kode barang: <strong>ANGKA SAJA</strong> (contoh: 001, 1)</li>
+                        <li>Nama barang muncul otomatis dari sistem</li>
                         <li>Jika nama tidak muncul = KODE SALAH</li>
-                        <li>Cek ulang sebelum klik TAMBAH</li>
+                        <li>Periksa data sebelum klik TAMBAH</li>
                     </ul>
                 </div>
                 
@@ -403,12 +403,14 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="kodeBarang">Kode Barang *</label>
+                    <label for="kodeBarang">Kode Barang (Angka saja) *</label>
                     <input 
-                        type="text" 
+                        type="number" 
                         id="kodeBarang" 
-                        placeholder="Contoh: BRG001"
+                        placeholder="Contoh: 001 atau 1"
                         autocomplete="off"
+                        min="0"
+                        inputmode="numeric"
                     >
                 </div>
 
@@ -507,16 +509,18 @@
                 
                 // Populate select dropdown
                 const select = document.getElementById('masterBarangList');
-                Object.keys(masterBarang).sort().forEach(kode => {
+                Object.keys(masterBarang).sort((a, b) => parseInt(a) - parseInt(b)).forEach(kode => {
+                    const item = masterBarang[kode];
+                    const nama = typeof item === 'string' ? item : item.nama;
                     const option = document.createElement('option');
                     option.value = kode;
-                    option.textContent = `${kode} - ${masterBarang[kode]}`;
+                    option.textContent = `${kode} - ${nama}`;
                     select.appendChild(option);
                 });
 
                 loadDaftarSO();
             } catch (error) {
-                showMessage('Error memuat master barang: ' + error.message, 'error');
+                showMessage('Error memload master barang: ' + error.message, 'error');
             }
         }
 
@@ -529,42 +533,42 @@
             }, 5000);
         }
 
-        // Validasi kode barang saat input blur
+        // Validasi kode barang (ANGKA SAJA) saat input blur
         document.getElementById('kodeBarang').addEventListener('blur', async function() {
-            const kode = this.value.trim().toUpperCase();
+            const kodeValue = this.value.trim();
             const namaBarangField = document.getElementById('namaBarang');
             
-            // Normalize input
-            if (kode !== this.value) {
-                this.value = kode;
-            }
-            
-            if (!kode) {
+            if (!kodeValue) {
                 namaBarangField.value = '';
                 namaBarangField.style.background = '#fff';
                 namaBarangField.style.borderColor = '#e0e0e0';
                 return;
             }
 
+            // Normalize: hanya gunakan string tanpa leading zeros
+            const kode = String(parseInt(kodeValue));
+            this.value = kode;
+
             if (masterBarang[kode]) {
-                namaBarangField.value = masterBarang[kode];
+                const item = masterBarang[kode];
+                const nama = typeof item === 'string' ? item : item.nama;
+                namaBarangField.value = nama;
                 namaBarangField.style.background = '#f0fdf4';
                 namaBarangField.style.borderColor = '#22c55e';
-                showMessage(`✓ Kode ${kode} ditemukan: ${masterBarang[kode]}`, 'success');
+                showMessage(`✓ Kode ${kode} ditemukan: ${nama}`, 'success');
             } else {
                 namaBarangField.value = '';
                 namaBarangField.style.background = '#fef2f2';
                 namaBarangField.style.borderColor = '#ef4444';
-                showMessage(`⚠️ PERINGATAN: Kode "${kode}" TIDAK DITEMUKAN di master barang. Cek ulang kode Anda!`, 'error');
+                showMessage(`⚠️ Kode "${kode}" tidak ada di master`, 'error');
             }
         });
 
-        // Real-time validation saat typing
+        // Real-time reset saat typing
         document.getElementById('kodeBarang').addEventListener('input', function() {
-            const kode = this.value.trim().toUpperCase();
             const namaBarangField = document.getElementById('namaBarang');
             
-            if (!kode) {
+            if (!this.value) {
                 namaBarangField.style.background = '#fff';
                 namaBarangField.style.borderColor = '#e0e0e0';
                 namaBarangField.value = '';
@@ -578,8 +582,12 @@
                 showMessage('Pilih kode barang dari dropdown', 'info');
                 return;
             }
-            document.getElementById('kodeBarang').value = select.value;
-            document.getElementById('namaBarang').value = masterBarang[select.value];
+            const selectedKode = select.value;
+            const item = masterBarang[selectedKode];
+            const nama = typeof item === 'string' ? item : item.nama;
+            
+            document.getElementById('kodeBarang').value = selectedKode;
+            document.getElementById('namaBarang').value = nama;
             document.getElementById('stokReal').focus();
         }
 
@@ -603,85 +611,77 @@
             }
         }
 
-        // Tambah data
+        // Tambah data - OPTIMIZED untuk CEPAT
         async function tambahData() {
-            const kode = document.getElementById('kodeBarang').value.trim().toUpperCase();
-            const namaBarang = document.getElementById('namaBarang').value.trim();
-            const stokReal = document.getElementById('stokReal').value.trim();
+            const kodeRaw = document.getElementById('kodeBarang').value.trim();
+            const kode = String(parseInt(kodeRaw)); // Normalize: string tanpa leading zeros
             const namaArea = document.getElementById('namaArea').value.trim();
+            const stokReal = parseInt(document.getElementById('stokReal').value.trim());
 
-            // Validasi
-            if (!namaArea) {
-                showMessage('❌ Nama area tidak boleh kosong', 'error');
-                document.getElementById('namaArea').focus();
+            // FAST VALIDATION
+            if (!namaArea || !kodeRaw || isNaN(stokReal) || stokReal < 0) {
+                const errorMsg = !namaArea ? 'Area kosong' : !kodeRaw ? 'Kode kosong' : stokReal < 0 ? 'Stok invalid' : 'Input invalid';
+                showMessage('❌ ' + errorMsg, 'error');
                 return;
             }
 
-            if (!kode) {
-                showMessage('❌ Kode barang tidak boleh kosong', 'error');
-                document.getElementById('kodeBarang').focus();
+            // Check kode ada di master
+            const itemData = masterBarang[kode];
+            if (!itemData) {
+                showMessage(`❌ Kode "${kode}" tidak ada`, 'error');
                 return;
             }
+            const namaBarang = typeof itemData === 'string' ? itemData : itemData.nama;
 
-            // Validasi kode ada di master
-            if (!masterBarang[kode]) {
-                showMessage(`❌ KODE "${kode}" TIDAK DITEMUKAN! Silakan cek ulang atau pilih dari dropdown.`, 'error');
-                document.getElementById('kodeBarang').focus();
-                return;
-            }
-
-            if (!stokReal || isNaN(stokReal) || parseInt(stokReal) < 0) {
-                showMessage('❌ Stok real harus angka positif', 'error');
-                document.getElementById('stokReal').focus();
-                return;
-            }
-
-            // Konfirmasi sebelum submit
-            const confirmMsg = `
-📋 PERIKSA DATA SEBELUM SUBMIT:
-
-Area: ${namaArea}
-Kode: ${kode}
-Nama: ${namaBarang}
-Stok: ${stokReal} unit
-
-Apakah data sudah benar? Tekan OK untuk lanjut.
-            `;
-
-            if (!confirm(confirmMsg.trim())) {
-                showMessage('Data dibatalkan', 'info');
+            // QUICK CONFIRM
+            if (!confirm(`${kode} - ${namaBarang}\nStok: ${stokReal}\nOK?`)) {
                 return;
             }
 
             try {
-                setButtonLoading('btnTambah', true);
+                const btn = document.getElementById('btnTambah');
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner"></span>';
 
-                const response = await fetch('/api/tambah-so', {
+                // DIRECT FETCH - no overhead
+                const resp = await fetch('/api/tambah-so', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         kode_barang: kode,
                         nama_barang: namaBarang,
-                        stok_real: parseInt(stokReal),
+                        stok_real: stokReal,
                         nama_area: namaArea
                     })
                 });
 
-                const result = await response.json();
-
-                if (response.ok) {
-                    showMessage('Data berhasil ditambahkan', 'success');
-                    resetForm();
-                    loadDaftarSO();
-                } else {
-                    showMessage(result.message, 'error');
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    showMessage('❌ ' + err.message, 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = 'Tambah';
+                    return;
                 }
+
+                // Quick success
+                showMessage('✓ Berhasil ditambah', 'success');
+                
+                // Reset form langsung
+                document.getElementById('kodeBarang').value = '';
+                document.getElementById('namaBarang').value = '';
+                document.getElementById('stokReal').value = '';
+                document.getElementById('kodeBarang').focus();
+                
+                // Reload data WITHOUT waiting for response
+                loadDaftarSO();
+                
+                btn.disabled = false;
+                btn.innerHTML = 'Tambah';
+
             } catch (error) {
-                showMessage('Error: ' + error.message, 'error');
-            } finally {
-                setButtonLoading('btnTambah', false);
+                showMessage('❌ Error: ' + error.message, 'error');
+                document.getElementById('btnTambah').disabled = false;
+                document.getElementById('btnTambah').innerHTML = 'Tambah';
             }
         }
 
@@ -695,34 +695,29 @@ Apakah data sudah benar? Tekan OK untuk lanjut.
             document.getElementById('kodeBarang').focus();
         }
 
-        // Load daftar SO
+        // Load daftar SO - OPTIMIZED
         async function loadDaftarSO() {
             try {
-                const response = await fetch('/api/daftar-so');
-                const data = await response.json();
+                const resp = await fetch('/api/daftar-so');
+                const data = await resp.json();
 
                 const tableBody = document.getElementById('tableBody');
                 
                 if (data.length === 0) {
-                    tableBody.innerHTML = '<tr><td colspan="6" class="no-data">Belum ada data. Silakan tambahkan data di atas.</td></tr>';
+                    tableBody.innerHTML = '<tr><td colspan="6" class="no-data">Belum ada data.</td></tr>';
                 } else {
-                    tableBody.innerHTML = data.map((item, index) => `
-                        <tr>
-                            <td>${index + 1}</td>
-                            <td><strong>${item.kode_barang}</strong></td>
-                            <td>${item.nama_barang}</td>
-                            <td style="text-align: center;">${item.stok_real}</td>
-                            <td>${item.nama_area}</td>
-                            <td>
-                                <button class="btn-hapus" onclick="hapusData(${index})">Hapus</button>
-                            </td>
-                        </tr>
-                    `).join('');
+                    // Use fragment untuk faster DOM insertion
+                    let html = '';
+                    for (let i = 0; i < data.length; i++) {
+                        const item = data[i];
+                        html += `<tr><td>${i + 1}</td><td><strong>${item.kode_barang}</strong></td><td>${item.nama_barang}</td><td style="text-align: center;">${item.stok_real}</td><td>${item.nama_area}</td><td><button class="btn-hapus" onclick="hapusData(${i})">Hapus</button></td></tr>`;
+                    }
+                    tableBody.innerHTML = html;
                 }
 
                 updateStats(data);
-            } catch (error) {
-                showMessage('Error memuat data: ' + error.message, 'error');
+            } catch (e) {
+                console.log('Load error:', e);
             }
         }
 
@@ -777,7 +772,7 @@ Apakah data sudah benar? Tekan OK untuk lanjut.
             document.getElementById('totalStok').textContent = totalStok;
         }
 
-        // Export Excel + Auto Share ke WA
+        // Export Excel + Auto Share ke WA (Mobile Optimized)
         async function exportExcel() {
             try {
                 setButtonLoading('btnExport', true);
@@ -794,22 +789,37 @@ Apakah data sudah benar? Tekan OK untuk lanjut.
                 }
 
                 const blob = await responseExcel.blob();
+                const filename = responseExcel.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'hasil_so.xlsx';
+                
+                // Download file ke device
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                const filename = responseExcel.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'hasil_so.xlsx';
                 a.download = filename;
+                a.style.display = 'none';
                 document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                a.remove();
-
-                showMessage('File berhasil diunduh', 'success');
-
-                // Step 2: Auto send to WhatsApp
+                
+                // Trigger download - mobile friendly
+                if (navigator.userAgent.match(/iPhone|iPad|iPod|Android/i)) {
+                    // Mobile: open in new tab untuk auto-download
+                    window.open(url, '_blank');
+                } else {
+                    // Desktop: click download
+                    a.click();
+                }
+                
+                // Cleanup
                 setTimeout(() => {
-                    shareToWhatsApp(filename);
-                }, 1000);
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+                }, 100);
+
+                showMessage(`✓ File ${filename} berhasil diunduh ke Downloads`, 'success');
+
+                // Step 2: Buka WhatsApp dengan pesan untuk kirim file manually
+                setTimeout(() => {
+                    shareToWhatsAppMobile(filename);
+                }, 1500);
 
             } catch (error) {
                 showMessage('Error export: ' + error.message, 'error');
@@ -817,8 +827,8 @@ Apakah data sudah benar? Tekan OK untuk lanjut.
             }
         }
 
-        // Helper: Share ke WhatsApp
-        async function shareToWhatsApp(filename) {
+        // Helper: Share ke WhatsApp Mobile (buka app dengan pesan)
+        async function shareToWhatsAppMobile(filename) {
             try {
                 const nomorWA = '+62 851-1731-0261';
 
@@ -835,12 +845,22 @@ Apakah data sudah benar? Tekan OK untuk lanjut.
                 const result = await response.json();
 
                 if (response.ok) {
-                    // Buka WhatsApp dengan pesan
-                    window.open(result.link, '_blank');
-                    showMessage(`Membuka WhatsApp untuk ${nomorWA}`, 'success');
+                    // Cek apakah di mobile
+                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                    
+                    if (isMobile) {
+                        // Di mobile: Buka WhatsApp app dengan wa.me link
+                        const waLink = `whatsapp://send?phone=${result.nomor.replace('+', '')}&text=${encodeURIComponent(result.pesan)}`;
+                        window.location.href = waLink;
+                    } else {
+                        // Di desktop: Buka WhatsApp Web
+                        window.open(result.link, '_blank');
+                    }
+                    
+                    showMessage(`📱 Membuka WhatsApp untuk ${nomorWA}\n\n📎 Silakan attach file ${filename} dari Downloads folder Anda`, 'success');
                 }
             } catch (error) {
-                console.log('WhatsApp share helper error:', error);
+                console.log('WhatsApp share error:', error);
             } finally {
                 setButtonLoading('btnExport', false);
             }
@@ -881,10 +901,21 @@ Apakah data sudah benar? Tekan OK untuk lanjut.
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = result.filename;
+                a.style.display = 'none';
                 document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                a.remove();
+                
+                // Trigger download - mobile friendly
+                if (navigator.userAgent.match(/iPhone|iPad|iPod|Android/i)) {
+                    window.open(url, '_blank');
+                } else {
+                    a.click();
+                }
+                
+                // Cleanup
+                setTimeout(() => {
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+                }, 100);
 
                 // Buka WhatsApp dengan pesan
                 setTimeout(() => {

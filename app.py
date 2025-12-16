@@ -11,15 +11,20 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 # In-memory storage untuk data SO
 so_data = []
 
-# Folder untuk file Excel
-TEMPLATE_FOLDER = "data"
-if not os.path.exists(TEMPLATE_FOLDER):
-    os.makedirs(TEMPLATE_FOLDER)
+# Folder untuk baca master barang (TB_BARANG.xlsx)
+DATA_FOLDER = "data"
+if not os.path.exists(DATA_FOLDER):
+    os.makedirs(DATA_FOLDER)
+
+# Folder untuk simpan hasil SO - simpan di folder yang accessible
+UPLOADS_FOLDER = "uploads"
+if not os.path.exists(UPLOADS_FOLDER):
+    os.makedirs(UPLOADS_FOLDER)
 
 def load_master_barang():
-    """Membaca master barang dari TB_BARANG.xlsx"""
+    """Membaca master barang dari TB_BARANG.xlsx dengan atribut lengkap"""
     try:
-        filepath = os.path.join(TEMPLATE_FOLDER, "TB_BARANG.xlsx")
+        filepath = os.path.join(DATA_FOLDER, "TB_BARANG.xlsx")
         
         if not os.path.exists(filepath):
             return {}
@@ -27,14 +32,20 @@ def load_master_barang():
         wb = load_workbook(filepath)
         ws = wb.active
         
-        # Cari index kolom KODE dan NAMA dari header
+        # Cari index kolom dari header (case-insensitive)
         headers = {}
         for col_idx, cell in enumerate(ws[1], start=1):
             if cell.value:
                 headers[cell.value.strip().upper()] = col_idx
         
-        kode_col = headers.get('KODE')
-        nama_col = headers.get('NAMA')
+        # Cek berbagai nama kolom yang mungkin (prioritas: KODE, NAMA)
+        kode_col = headers.get('KODE') or headers.get('KODE_BARANG')
+        nama_col = headers.get('NAMA') or headers.get('NAMA_BARANG')
+        
+        # Kolom opsional
+        stok_col = headers.get('STOK')
+        satuan_col = headers.get('SATUAN')
+        kategori_col = headers.get('KATEGORI')
         
         if not kode_col or not nama_col:
             print("Error: Kolom KODE atau NAMA tidak ditemukan")
@@ -46,9 +57,21 @@ def load_master_barang():
             nama = row[nama_col - 1] if nama_col <= len(row) and row[nama_col - 1] else None
             
             if kode and nama:
-                kode = str(kode).strip()
+                # Normalize kode: convert ke string, strip whitespace
+                kode = str(int(kode)) if isinstance(kode, (int, float)) else str(kode).strip()
                 nama = str(nama).strip()
-                master[kode] = nama
+                
+                # Ambil atribut tambahan
+                stok = row[stok_col - 1] if stok_col and stok_col <= len(row) else None
+                satuan = row[satuan_col - 1] if satuan_col and satuan_col <= len(row) else 'Unit'
+                kategori = row[kategori_col - 1] if kategori_col and kategori_col <= len(row) else None
+                
+                master[kode] = {
+                    'nama': nama,
+                    'stok': stok if stok else 0,
+                    'satuan': satuan if satuan else 'Unit',
+                    'kategori': kategori
+                }
         
         return master
     except Exception as e:
@@ -64,6 +87,9 @@ def index():
 def api_master_barang():
     """API untuk mendapatkan semua master barang"""
     master = load_master_barang()
+    print(f"DEBUG: Loaded {len(master)} items from master barang")
+    if master:
+        print(f"DEBUG: First 5 items: {list(master.items())[:5]}")
     return jsonify(master)
 
 @app.route('/api/validasi-kode', methods=['POST'])
@@ -75,9 +101,13 @@ def api_validasi_kode():
     master = load_master_barang()
     
     if kode in master:
+        item = master[kode]
         return jsonify({
             'valid': True,
-            'nama_barang': master[kode]
+            'nama_barang': item['nama'] if isinstance(item, dict) else item,
+            'stok': item['stok'] if isinstance(item, dict) else None,
+            'satuan': item['satuan'] if isinstance(item, dict) else 'Unit',
+            'kategori': item['kategori'] if isinstance(item, dict) else None
         })
     else:
         return jsonify({
@@ -87,39 +117,27 @@ def api_validasi_kode():
 
 @app.route('/api/tambah-so', methods=['POST'])
 def api_tambah_so():
-    """API untuk menambah data SO"""
+    """API untuk menambah data SO - OPTIMIZED"""
     data = request.get_json()
-    kode = data.get('kode_barang', '').strip()
-    stok_real = data.get('stok_real', '')
-    nama_barang = data.get('nama_barang', '').strip()
-    nama_area = data.get('nama_area', '').strip()
+    kode = data['kode_barang']  # Already validated by frontend
+    stok_real = data['stok_real']
+    nama_barang = data['nama_barang']
+    nama_area = data['nama_area']
     
-    # Validasi
-    if not kode:
-        return jsonify({'success': False, 'message': 'Kode barang tidak boleh kosong'}), 400
-    
-    if not stok_real or not str(stok_real).isdigit():
-        return jsonify({'success': False, 'message': 'Stok real harus angka'}), 400
-    
-    # Validasi kode dengan master
-    master = load_master_barang()
-    if kode not in master:
-        return jsonify({'success': False, 'message': f'Kode {kode} tidak ditemukan'}), 400
-    
-    # Cek duplikat
+    # Quick duplicate check
     for item in so_data:
         if item['kode_barang'] == kode:
-            return jsonify({'success': False, 'message': f'Kode {kode} sudah ada di list'}), 400
+            return jsonify({'success': False, 'message': f'Duplikat kode {kode}'}), 400
     
-    # Tambah ke list
+    # Append directly
     so_data.append({
         'kode_barang': kode,
-        'nama_barang': master[kode],
-        'stok_real': int(stok_real),
+        'nama_barang': nama_barang,
+        'stok_real': stok_real,
         'nama_area': nama_area
     })
     
-    return jsonify({'success': True, 'data': so_data})
+    return jsonify({'success': True}), 200
 
 @app.route('/api/daftar-so')
 def api_daftar_so():
@@ -135,16 +153,25 @@ def api_share_whatsapp():
     # Ambil nama area
     nama_area = so_data[0].get('nama_area', 'Area Tidak Ditentukan') if so_data else 'Area Tidak Ditentukan'
     
-    # Buat pesan
-    pesan = f"*Stock Opname - {nama_area}*\n"
-    pesan += f"Tanggal: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}\n\n"
-    pesan += "Data SO:\n"
+    # Buat pesan dengan format yang lebih rapi
+    pesan = f"📦 *STOCK OPNAME - {nama_area}*\n"
+    pesan += f"📅 Tanggal: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}\n"
+    pesan += f"{'='*50}\n\n"
     
+    pesan += "*📋 DETAIL ITEM:*\n"
     for idx, item in enumerate(so_data, 1):
-        pesan += f"{idx}. {item['kode_barang']} - {item['nama_barang']}\n   Stok: {item['stok_real']} unit\n"
+        pesan += f"{idx}. {item['kode_barang']} - {item['nama_barang']}\n"
+        pesan += f"   ▸ Stok: {item['stok_real']} unit\n"
     
-    pesan += f"\nTotal Item: {len(so_data)}\n"
-    pesan += f"Total Stok: {sum(item['stok_real'] for item in so_data)}"
+    pesan += f"\n{'='*50}\n"
+    pesan += f"📊 *RINGKASAN:*\n"
+    pesan += f"✓ Total Item: {len(so_data)}\n"
+    pesan += f"✓ Total Stok: {sum(item['stok_real'] for item in so_data)} unit\n\n"
+    pesan += f"{'='*50}\n"
+    pesan += f"📥 *UNTUK FILE EXCEL:*\n"
+    pesan += f"1️⃣ Klik tombol 'Export & Kirim WA'\n"
+    pesan += f"2️⃣ File otomatis download\n"
+    pesan += f"3️⃣ Upload file ke chat WhatsApp"
     
     # Encode pesan untuk URL
     encoded_pesan = quote(pesan)
@@ -218,8 +245,10 @@ def buat_excel_so():
     ws.column_dimensions['D'].width = 12
     
     nama_area_clean = nama_area.replace(' ', '_').replace('/', '_')
-    filename = f"{nama_area_clean}_SO.xlsx"
-    filepath = os.path.join(TEMPLATE_FOLDER, filename)
+    # Include timestamp untuk avoid overwrite
+    timestamp = datetime.now().strftime('%d%m%Y_%H%M%S')
+    filename = f"{nama_area_clean}_SO_{timestamp}.xlsx"
+    filepath = os.path.join(UPLOADS_FOLDER, filename)
     wb.save(filepath)
     
     return filepath, filename, nama_area
@@ -231,7 +260,19 @@ def api_export_excel():
         return jsonify({'success': False, 'message': 'Tidak ada data untuk diekspor'}), 400
     
     filepath, filename, _ = buat_excel_so()
-    return send_file(filepath, as_attachment=True, download_name=filename)
+    return send_file(filepath, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+@app.route('/api/download-file/<filename>', methods=['GET'])
+def api_download_file(filename):
+    """API untuk download file dari uploads folder"""
+    try:
+        filepath = os.path.join(UPLOADS_FOLDER, filename)
+        if not os.path.exists(filepath):
+            return jsonify({'success': False, 'message': 'File tidak ditemukan'}), 404
+        
+        return send_file(filepath, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
 
 @app.route('/api/share-excel-whatsapp', methods=['POST'])
 def api_share_excel_whatsapp():
@@ -251,8 +292,29 @@ def api_share_excel_whatsapp():
     elif not nomor_wa_clean.startswith('62'):
         nomor_wa_clean = '62' + nomor_wa_clean
     
-    # Pesan WhatsApp
-    pesan = f"Stock Opname - {nama_area}\n\nFile SO sudah siap: {filename}"
+    # Generate download link
+    download_link = f"{request.host_url.rstrip('/')}/api/download-file/{filename}"
+    
+    # Pesan WhatsApp dengan detail item + link download
+    pesan = f"📦 *STOCK OPNAME - {nama_area}*\n"
+    pesan += f"📅 Tanggal: {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
+    pesan += f"{'='*50}\n\n"
+    
+    # Detail item
+    pesan += "*📋 DETAIL ITEM:*\n"
+    for idx, item in enumerate(so_data, 1):
+        pesan += f"{idx}. {item['kode_barang']} - {item['nama_barang']}\n"
+        pesan += f"   ▸ Stok: {item['stok_real']} unit\n"
+    
+    pesan += f"\n{'='*50}\n"
+    pesan += f"📊 *RINGKASAN:*\n"
+    pesan += f"✓ Total Item: {len(so_data)}\n"
+    pesan += f"✓ Total Stok: {sum(item['stok_real'] for item in so_data)} unit\n\n"
+    pesan += f"{'='*50}\n"
+    pesan += f"📥 *DOWNLOAD FILE EXCEL:*\n"
+    pesan += f"🔗 {download_link}\n\n"
+    pesan += f"✅ Klik link di atas untuk download, lalu upload ke chat"
+    
     encoded_pesan = quote(pesan)
     
     # WhatsApp link dengan nomor tertentu
@@ -262,11 +324,11 @@ def api_share_excel_whatsapp():
         'success': True,
         'link': whatsapp_link,
         'filename': filename,
-        'nomor': nomor_wa_clean
+        'nomor': nomor_wa_clean,
+        'pesan': pesan
     })
 
 if __name__ == '__main__':
-    import os
     debug_mode = os.getenv('FLASK_ENV', 'development') == 'development'
     port = int(os.getenv('PORT', 5000))
     app.run(debug=debug_mode, host='0.0.0.0', port=port)
