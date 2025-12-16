@@ -16,10 +16,16 @@ DATA_FOLDER = "data"
 if not os.path.exists(DATA_FOLDER):
     os.makedirs(DATA_FOLDER)
 
-# Folder untuk simpan hasil SO - simpan di folder yang accessible
-UPLOADS_FOLDER = "uploads"
-if not os.path.exists(UPLOADS_FOLDER):
-    os.makedirs(UPLOADS_FOLDER)
+# Folder untuk simpan hasil SO - gunakan /tmp untuk Vercel, uploads untuk local
+import tempfile
+try:
+    # Coba gunakan uploads folder (untuk local development)
+    UPLOADS_FOLDER = "uploads"
+    if not os.path.exists(UPLOADS_FOLDER):
+        os.makedirs(UPLOADS_FOLDER)
+except (OSError, PermissionError):
+    # Fallback ke /tmp untuk Vercel (read-only filesystem)
+    UPLOADS_FOLDER = tempfile.gettempdir()
 
 def load_master_barang():
     """Membaca master barang dari TB_BARANG.xlsx dengan atribut lengkap"""
@@ -266,12 +272,22 @@ def api_export_excel():
 def api_download_file(filename):
     """API untuk download file dari uploads folder"""
     try:
+        # Security: prevent directory traversal
+        if '..' in filename or '/' in filename:
+            return jsonify({'success': False, 'message': 'Invalid filename'}), 400
+        
         filepath = os.path.join(UPLOADS_FOLDER, filename)
+        
+        # Double check path security
+        if not os.path.abspath(filepath).startswith(os.path.abspath(UPLOADS_FOLDER)):
+            return jsonify({'success': False, 'message': 'Invalid file path'}), 400
+        
         if not os.path.exists(filepath):
             return jsonify({'success': False, 'message': 'File tidak ditemukan'}), 404
         
         return send_file(filepath, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     except Exception as e:
+        print(f"Download error: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 400
 
 @app.route('/api/share-excel-whatsapp', methods=['POST'])
