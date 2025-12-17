@@ -7,9 +7,6 @@ from urllib.parse import quote
 import sqlite3
 import uuid
 import json
-import firebase_admin
-from firebase_admin import credentials, storage
-from io import BytesIO
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
@@ -18,31 +15,6 @@ app.secret_key = 'stok-opname-secret-key-2025'  # Untuk session management
 # Session timeout: 4 jam (14400 detik)
 app.config['PERMANENT_SESSION_LIFETIME'] = 14400
 app.config['SESSION_REFRESH_EACH_REQUEST'] = True
-
-# Firebase initialization
-FIREBASE_ENABLED = False
-try:
-    # Local: baca dari firebase-key.json
-    if os.path.exists('firebase-key.json'):
-        cred = credentials.Certificate('firebase-key.json')
-        firebase_admin.initialize_app(cred, {
-            'storageBucket': 'stok-opname.appspot.com'  # Ganti dengan bucket nama Anda
-        })
-        FIREBASE_ENABLED = True
-        print("✅ Firebase initialized (local)")
-    # Vercel: baca dari environment variable
-    elif os.getenv('FIREBASE_KEY'):
-        import json
-        cred_dict = json.loads(os.getenv('FIREBASE_KEY'))
-        cred = credentials.Certificate(cred_dict)
-        firebase_admin.initialize_app(cred, {
-            'storageBucket': os.getenv('FIREBASE_BUCKET', 'stok-opname.appspot.com')
-        })
-        FIREBASE_ENABLED = True
-        print("✅ Firebase initialized (Vercel)")
-except Exception as e:
-    print(f"⚠️ Firebase initialization failed: {str(e)}")
-    print("🔄 Fallback: Using direct download links")
 
 # Database setup
 DB_FILE = "data/stok_opname.db"
@@ -358,25 +330,6 @@ def api_reset_so():
     reset_so_data(session_id)
     return jsonify({'success': True, 'message': 'Data SO direset'})
 
-def upload_excel_to_firebase(excel_io, filename):
-    """Upload Excel ke Firebase Storage dan return public URL"""
-    try:
-        bucket = storage.bucket()
-        blob = bucket.blob(f"so/{filename}")
-        
-        # Upload file
-        blob.upload_from_string(
-            excel_io.getvalue(),
-            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
-        
-        # Generate public URL
-        public_url = f"https://firebasestorage.googleapis.com/v0/b/{bucket.name}/o/so%2F{filename}?alt=media"
-        return public_url
-    except Exception as e:
-        print(f"Firebase upload error: {str(e)}")
-        return None
-
 def buat_excel_so_memory(session_id):
     """Helper function untuk membuat Excel SO - return sebagai BytesIO (tanpa simpan file)"""
     from io import BytesIO
@@ -476,16 +429,8 @@ def api_share_excel_whatsapp():
     if not so_data:
         return jsonify({'success': False, 'message': 'Tidak ada data untuk dibagikan'}), 400
     
-    # Buat Excel file
+    # Langsung download tanpa simpan file
     excel_io, filename, nama_area = buat_excel_so_memory(session_id)
-    
-    # Upload ke Firebase jika enabled, fallback ke direct download
-    if FIREBASE_ENABLED:
-        download_link = upload_excel_to_firebase(excel_io, filename)
-        if not download_link:
-            download_link = f"{request.host_url.rstrip('/')}/api/export-excel"
-    else:
-        download_link = f"{request.host_url.rstrip('/')}/api/export-excel"
     
     # Format nomor WhatsApp (remove semua karakter non-digit)
     nomor_wa = request.get_json().get('nomor', '+62 851-1731-0261')
@@ -496,6 +441,9 @@ def api_share_excel_whatsapp():
         nomor_wa_clean = '62' + nomor_wa_clean[1:]
     elif not nomor_wa_clean.startswith('62'):
         nomor_wa_clean = '62' + nomor_wa_clean
+    
+    # Generate download link - direct download endpoint
+    download_link = f"{request.host_url.rstrip('/')}/api/export-excel"
     
     # Pesan WhatsApp dengan detail item + link download
     pesan = f"📦 *STOCK OPNAME - {nama_area}*\n"
