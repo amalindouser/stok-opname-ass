@@ -423,60 +423,66 @@ def api_download_file(filename):
 @app.route('/api/share-excel-whatsapp', methods=['POST'])
 def api_share_excel_whatsapp():
     """API untuk share Excel ke WhatsApp dengan nomor tertentu"""
-    session_id = get_session_id()
-    so_data = get_so_data(session_id)
-    
-    if not so_data:
-        return jsonify({'success': False, 'message': 'Tidak ada data untuk dibagikan'}), 400
-    
-    # Langsung download tanpa simpan file
-    excel_io, filename, nama_area = buat_excel_so_memory(session_id)
-    
-    # Format nomor WhatsApp (remove semua karakter non-digit)
-    nomor_wa = request.get_json().get('nomor', '+62 851-1731-0261')
-    nomor_wa_clean = ''.join(filter(str.isdigit, nomor_wa))
-    
-    # Ganti 0 di awal dengan 62
-    if nomor_wa_clean.startswith('0'):
-        nomor_wa_clean = '62' + nomor_wa_clean[1:]
-    elif not nomor_wa_clean.startswith('62'):
-        nomor_wa_clean = '62' + nomor_wa_clean
-    
-    # Generate download link - direct download endpoint
-    download_link = f"{request.host_url.rstrip('/')}/api/export-excel"
-    
-    # Pesan WhatsApp dengan detail item + link download
-    pesan = f"📦 *STOCK OPNAME - {nama_area}*\n"
-    pesan += f"📅 Tanggal: {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
-    pesan += f"{'='*50}\n\n"
-    
-    # Detail item
-    pesan += "*📋 DETAIL ITEM:*\n"
-    for idx, item in enumerate(so_data, 1):
-        pesan += f"{idx}. {item['kode_barang']} - {item['nama_barang']}\n"
-        pesan += f"   ▸ Stok: {item['stok_real']} unit\n"
-    
-    pesan += f"\n{'='*50}\n"
-    pesan += f"📊 *RINGKASAN:*\n"
-    pesan += f"✓ Total Item: {len(so_data)}\n"
-    pesan += f"✓ Total Stok: {sum(item['stok_real'] for item in so_data)} unit\n\n"
-    pesan += f"{'='*50}\n"
-    pesan += f"📥 *DOWNLOAD FILE EXCEL:*\n"
-    pesan += f"🔗 {download_link}\n\n"
-    pesan += f"✅ Klik link di atas untuk download, lalu upload ke chat"
-    
-    encoded_pesan = quote(pesan)
-    
-    # WhatsApp link dengan nomor tertentu
-    whatsapp_link = f"https://wa.me/{nomor_wa_clean}?text={encoded_pesan}"
-    
-    return jsonify({
-        'success': True,
-        'link': whatsapp_link,
-        'filename': filename,
-        'nomor': nomor_wa_clean,
-        'pesan': pesan
-    })
+    try:
+        session_id = get_session_id()
+        so_data = get_so_data(session_id)
+        
+        if not so_data:
+            return jsonify({'success': False, 'message': 'Tidak ada data untuk dibagikan'}), 400
+        
+        # Langsung download tanpa simpan file
+        excel_io, filename, nama_area = buat_excel_so_memory(session_id)
+        
+        # Format nomor WhatsApp (remove semua karakter non-digit)
+        nomor_wa = request.get_json().get('nomor', '+62 851-1731-0261')
+        nomor_wa_clean = ''.join(filter(str.isdigit, nomor_wa))
+        
+        # Ganti 0 di awal dengan 62
+        if nomor_wa_clean.startswith('0'):
+            nomor_wa_clean = '62' + nomor_wa_clean[1:]
+        elif not nomor_wa_clean.startswith('62'):
+            nomor_wa_clean = '62' + nomor_wa_clean
+        
+        # Generate download link - direct download endpoint
+        download_link = f"{request.host_url.rstrip('/')}/api/export-excel"
+        
+        # Pesan WhatsApp dengan detail item + link download
+        pesan = f"📦 *STOCK OPNAME - {nama_area}*\n"
+        pesan += f"📅 Tanggal: {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
+        pesan += f"{'='*50}\n\n"
+        
+        # Detail item
+        pesan += "*📋 DETAIL ITEM:*\n"
+        for idx, item in enumerate(so_data, 1):
+            pesan += f"{idx}. {item['kode_barang']} - {item['nama_barang']}\n"
+            pesan += f"   ▸ Stok: {item['stok_real']} unit\n"
+        
+        pesan += f"\n{'='*50}\n"
+        pesan += f"📊 *RINGKASAN:*\n"
+        pesan += f"✓ Total Item: {len(so_data)}\n"
+        pesan += f"✓ Total Stok: {sum(item['stok_real'] for item in so_data)} unit\n\n"
+        pesan += f"{'='*50}\n"
+        pesan += f"📥 *DOWNLOAD FILE EXCEL:*\n"
+        pesan += f"🔗 {download_link}\n\n"
+        pesan += f"✅ Klik link di atas untuk download, lalu upload ke chat"
+        
+        encoded_pesan = quote(pesan)
+        
+        # WhatsApp link dengan nomor tertentu
+        whatsapp_link = f"https://wa.me/{nomor_wa_clean}?text={encoded_pesan}"
+        
+        return jsonify({
+            'success': True,
+            'link': whatsapp_link,
+            'filename': filename,
+            'nomor': nomor_wa_clean,
+            'pesan': pesan
+        })
+    except Exception as e:
+        print(f"Error sharing to WhatsApp: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 400
 
 if __name__ == '__main__':
     debug_mode = os.getenv('FLASK_ENV', 'development') == 'development'
