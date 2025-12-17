@@ -381,9 +381,9 @@ def buat_excel_so_memory(session_id):
     
     return output, filename, nama_area
 
-@app.route('/api/export-excel', methods=['POST'])
+@app.route('/api/export-excel', methods=['GET', 'POST'])
 def api_export_excel():
-    """API untuk export data SO ke Excel"""
+    """API untuk export data SO ke Excel - support GET dan POST"""
     session_id = get_session_id()
     so_data = get_so_data(session_id)
     
