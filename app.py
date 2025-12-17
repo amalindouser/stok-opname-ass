@@ -14,32 +14,44 @@ app.secret_key = 'stok-opname-secret-key-2025'  # Untuk session management
 
 # Database setup
 DB_FILE = "data/stok_opname.db"
+DB_ENABLED = False
 
 def init_db():
     """Initialize SQLite database"""
-    os.makedirs(os.path.dirname(DB_FILE) or '.', exist_ok=True)
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS so_sessions (
-        id TEXT PRIMARY KEY,
-        nama_area TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS so_items (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        session_id TEXT,
-        kode_barang TEXT,
-        nama_barang TEXT,
-        stok_real INTEGER,
-        nama_area TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(session_id) REFERENCES so_sessions(id)
-    )''')
-    conn.commit()
-    conn.close()
+    global DB_ENABLED
+    try:
+        os.makedirs(os.path.dirname(DB_FILE) or '.', exist_ok=True)
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute('''CREATE TABLE IF NOT EXISTS so_sessions (
+            id TEXT PRIMARY KEY,
+            nama_area TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+        c.execute('''CREATE TABLE IF NOT EXISTS so_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT,
+            kode_barang TEXT,
+            nama_barang TEXT,
+            stok_real INTEGER,
+            nama_area TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(session_id) REFERENCES so_sessions(id)
+        )''')
+        conn.commit()
+        conn.close()
+        DB_ENABLED = True
+        print("✅ Database initialized successfully")
+    except Exception as e:
+        print(f"⚠️ Database initialization failed: {str(e)}")
+        print("🔄 Falling back to in-memory storage (Vercel ephemeral mode)")
+        DB_ENABLED = False
 
 init_db()
+
+# Fallback: in-memory storage untuk Vercel
+in_memory_data = {}
 
 def get_session_id():
     """Get or create session ID"""
@@ -48,40 +60,69 @@ def get_session_id():
     return session['so_session_id']
 
 def get_so_data(session_id):
-    """Get SO data dari database"""
-    conn = sqlite3.connect(DB_FILE)
-    conn.row_factory = sqlite3.Row
-    c = conn.cursor()
-    c.execute('SELECT * FROM so_items WHERE session_id = ? ORDER BY id', (session_id,))
-    rows = c.fetchall()
-    conn.close()
-    return [dict(row) for row in rows]
+    """Get SO data dari database atau in-memory"""
+    if DB_ENABLED:
+        conn = sqlite3.connect(DB_FILE)
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        c.execute('SELECT * FROM so_items WHERE session_id = ? ORDER BY id', (session_id,))
+        rows = c.fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
+    else:
+        # Fallback to in-memory
+        if session_id not in in_memory_data:
+            in_memory_data[session_id] = []
+        return in_memory_data[session_id]
 
 def add_so_item(session_id, kode_barang, nama_barang, stok_real, nama_area):
-    """Add item ke database"""
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute('''INSERT INTO so_items (session_id, kode_barang, nama_barang, stok_real, nama_area)
-                 VALUES (?, ?, ?, ?, ?)''',
-              (session_id, kode_barang, nama_barang, stok_real, nama_area))
-    conn.commit()
-    conn.close()
+    """Add item ke database atau in-memory"""
+    if DB_ENABLED:
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute('''INSERT INTO so_items (session_id, kode_barang, nama_barang, stok_real, nama_area)
+                     VALUES (?, ?, ?, ?, ?)''',
+                  (session_id, kode_barang, nama_barang, stok_real, nama_area))
+        conn.commit()
+        conn.close()
+    else:
+        # Fallback to in-memory
+        if session_id not in in_memory_data:
+            in_memory_data[session_id] = []
+        item_id = len(in_memory_data[session_id]) + 1
+        in_memory_data[session_id].append({
+            'id': item_id,
+            'kode_barang': kode_barang,
+            'nama_barang': nama_barang,
+            'stok_real': stok_real,
+            'nama_area': nama_area
+        })
 
 def delete_so_item(session_id, item_id):
-    """Delete item dari database"""
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute('DELETE FROM so_items WHERE id = ? AND session_id = ?', (item_id, session_id))
-    conn.commit()
-    conn.close()
+    """Delete item dari database atau in-memory"""
+    if DB_ENABLED:
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute('DELETE FROM so_items WHERE id = ? AND session_id = ?', (item_id, session_id))
+        conn.commit()
+        conn.close()
+    else:
+        # Fallback to in-memory
+        if session_id in in_memory_data:
+            in_memory_data[session_id] = [item for item in in_memory_data[session_id] if item['id'] != item_id]
 
 def reset_so_data(session_id):
     """Reset semua data untuk session"""
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute('DELETE FROM so_items WHERE session_id = ?', (session_id,))
-    conn.commit()
-    conn.close()
+    if DB_ENABLED:
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute('DELETE FROM so_items WHERE session_id = ?', (session_id,))
+        conn.commit()
+        conn.close()
+    else:
+        # Fallback to in-memory
+        if session_id in in_memory_data:
+            in_memory_data[session_id] = []
 
 # Folder untuk baca master barang (TB_BARANG.xlsx)
 DATA_FOLDER = "data"
