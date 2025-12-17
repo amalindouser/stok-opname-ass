@@ -12,6 +12,10 @@ app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 app.secret_key = 'stok-opname-secret-key-2025'  # Untuk session management
 
+# Session timeout: 4 jam (14400 detik)
+app.config['PERMANENT_SESSION_LIFETIME'] = 14400
+app.config['SESSION_REFRESH_EACH_REQUEST'] = True
+
 # Database setup
 DB_FILE = "data/stok_opname.db"
 DB_ENABLED = False
@@ -55,6 +59,7 @@ in_memory_data = {}
 
 def get_session_id():
     """Get or create session ID"""
+    session.permanent = True  # Permanent session (sampai timeout)
     if 'so_session_id' not in session:
         session['so_session_id'] = str(uuid.uuid4())
     return session['so_session_id']
