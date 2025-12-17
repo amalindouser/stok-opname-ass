@@ -325,8 +325,10 @@ def api_reset_so():
     reset_so_data(session_id)
     return jsonify({'success': True, 'message': 'Data SO direset'})
 
-def buat_excel_so(session_id):
-    """Helper function untuk membuat Excel SO"""
+def buat_excel_so_memory(session_id):
+    """Helper function untuk membuat Excel SO - return sebagai BytesIO (tanpa simpan file)"""
+    from io import BytesIO
+    
     so_data = get_so_data(session_id)
     # Ambil nama area dari data pertama (semua sama area)
     nama_area = so_data[0].get('nama_area', 'Tidak Ditentukan') if so_data else 'Tidak Ditentukan'
@@ -368,13 +370,16 @@ def buat_excel_so(session_id):
     ws.column_dimensions['D'].width = 12
     
     nama_area_clean = nama_area.replace(' ', '_').replace('/', '_')
-    # Include timestamp untuk avoid overwrite
+    # Include timestamp
     timestamp = datetime.now().strftime('%d%m%Y_%H%M%S')
     filename = f"{nama_area_clean}_SO_{timestamp}.xlsx"
-    filepath = os.path.join(UPLOADS_FOLDER, filename)
-    wb.save(filepath)
     
-    return filepath, filename, nama_area
+    # Return sebagai BytesIO (in-memory) tanpa simpan file
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    return output, filename, nama_area
 
 @app.route('/api/export-excel', methods=['POST'])
 def api_export_excel():
@@ -385,8 +390,8 @@ def api_export_excel():
     if not so_data:
         return jsonify({'success': False, 'message': 'Tidak ada data untuk diekspor'}), 400
     
-    filepath, filename, _ = buat_excel_so(session_id)
-    return send_file(filepath, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    excel_io, filename, _ = buat_excel_so_memory(session_id)
+    return send_file(excel_io, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 @app.route('/api/download-file/<filename>', methods=['GET'])
 def api_download_file(filename):
@@ -419,7 +424,8 @@ def api_share_excel_whatsapp():
     if not so_data:
         return jsonify({'success': False, 'message': 'Tidak ada data untuk dibagikan'}), 400
     
-    filepath, filename, nama_area = buat_excel_so(session_id)
+    # Langsung download tanpa simpan file
+    excel_io, filename, nama_area = buat_excel_so_memory(session_id)
     
     # Format nomor WhatsApp (remove semua karakter non-digit)
     nomor_wa = request.get_json().get('nomor', '+62 851-1731-0261')
@@ -431,8 +437,8 @@ def api_share_excel_whatsapp():
     elif not nomor_wa_clean.startswith('62'):
         nomor_wa_clean = '62' + nomor_wa_clean
     
-    # Generate download link
-    download_link = f"{request.host_url.rstrip('/')}/api/download-file/{filename}"
+    # Generate download link - direct download endpoint
+    download_link = f"{request.host_url.rstrip('/')}/api/export-excel"
     
     # Pesan WhatsApp dengan detail item + link download
     pesan = f"📦 *STOCK OPNAME - {nama_area}*\n"
