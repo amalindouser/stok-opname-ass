@@ -46,3 +46,10 @@ Thumbs.db
 # Excel files (jangan track generated files)
 data/*.xlsx
 !data/TB_BARANG.xlsx
+
+# Database & generated files
+data/*.db
+data/*.db-shm
+data/*.db-wal
+uploads/
+*.xlsx

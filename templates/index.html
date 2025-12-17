@@ -710,7 +710,7 @@
                     let html = '';
                     for (let i = 0; i < data.length; i++) {
                         const item = data[i];
-                        html += `<tr><td>${i + 1}</td><td><strong>${item.kode_barang}</strong></td><td>${item.nama_barang}</td><td style="text-align: center;">${item.stok_real}</td><td>${item.nama_area}</td><td><button class="btn-hapus" onclick="hapusData(${i})">Hapus</button></td></tr>`;
+                        html += `<tr><td>${i + 1}</td><td><strong>${item.kode_barang}</strong></td><td>${item.nama_barang}</td><td style="text-align: center;">${item.stok_real}</td><td>${item.nama_area}</td><td><button class="btn-hapus" onclick="hapusData(${item.id})">Hapus</button></td></tr>`;
                     }
                     tableBody.innerHTML = html;
                 }
@@ -742,9 +742,23 @@
             }
         }
 
-        // Reset semua data
+        // Reset semua data - dengan double verification
         async function resetSemua() {
-            if (!confirm('Yakin ingin menghapus SEMUA data SO? Tindakan ini tidak dapat dibatalkan.')) return;
+            // First confirmation
+            const confirm1 = confirm('⚠️ PERHATIAN!\n\nIni akan menghapus SEMUA data SO yang sudah diinput.\n\nYakin ingin lanjut?');
+            if (!confirm1) return;
+            
+            // Second confirmation - lebih ketat
+            const confirm2 = confirm('🚨 PERINGATAN AKHIR!\n\nData yang dihapus TIDAK DAPAT DIKEMBALIKAN.\n\nTuliskan kata "HAPUS SEMUA" di prompt berikutnya untuk konfirmasi');
+            if (!confirm2) return;
+            
+            // Third verification - input text
+            const verificationInput = prompt('Ketik "HAPUS SEMUA" untuk konfirmasi penghapusan:\n(Harus persis sama, case-sensitive)');
+            
+            if (verificationInput !== 'HAPUS SEMUA') {
+                showMessage('❌ Verifikasi gagal. Data tidak dihapus.', 'error');
+                return;
+            }
 
             try {
                 const response = await fetch('/api/reset-so', {
@@ -753,7 +767,7 @@
 
                 const result = await response.json();
                 if (response.ok) {
-                    showMessage('Semua data berhasil direset', 'success');
+                    showMessage('✅ Semua data berhasil direset', 'success');
                     loadDaftarSO();
                 } else {
                     showMessage(result.message, 'error');

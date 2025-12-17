@@ -1,15 +1,87 @@
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, session
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill
 import os
 from datetime import datetime
 from urllib.parse import quote
+import sqlite3
+import uuid
+import json
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+app.secret_key = 'stok-opname-secret-key-2025'  # Untuk session management
 
-# In-memory storage untuk data SO
-so_data = []
+# Database setup
+DB_FILE = "data/stok_opname.db"
+
+def init_db():
+    """Initialize SQLite database"""
+    os.makedirs(os.path.dirname(DB_FILE) or '.', exist_ok=True)
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS so_sessions (
+        id TEXT PRIMARY KEY,
+        nama_area TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS so_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT,
+        kode_barang TEXT,
+        nama_barang TEXT,
+        stok_real INTEGER,
+        nama_area TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(session_id) REFERENCES so_sessions(id)
+    )''')
+    conn.commit()
+    conn.close()
+
+init_db()
+
+def get_session_id():
+    """Get or create session ID"""
+    if 'so_session_id' not in session:
+        session['so_session_id'] = str(uuid.uuid4())
+    return session['so_session_id']
+
+def get_so_data(session_id):
+    """Get SO data dari database"""
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    c.execute('SELECT * FROM so_items WHERE session_id = ? ORDER BY id', (session_id,))
+    rows = c.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+def add_so_item(session_id, kode_barang, nama_barang, stok_real, nama_area):
+    """Add item ke database"""
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('''INSERT INTO so_items (session_id, kode_barang, nama_barang, stok_real, nama_area)
+                 VALUES (?, ?, ?, ?, ?)''',
+              (session_id, kode_barang, nama_barang, stok_real, nama_area))
+    conn.commit()
+    conn.close()
+
+def delete_so_item(session_id, item_id):
+    """Delete item dari database"""
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('DELETE FROM so_items WHERE id = ? AND session_id = ?', (item_id, session_id))
+    conn.commit()
+    conn.close()
+
+def reset_so_data(session_id):
+    """Reset semua data untuk session"""
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('DELETE FROM so_items WHERE session_id = ?', (session_id,))
+    conn.commit()
+    conn.close()
 
 # Folder untuk baca master barang (TB_BARANG.xlsx)
 DATA_FOLDER = "data"
@@ -124,35 +196,37 @@ def api_validasi_kode():
 @app.route('/api/tambah-so', methods=['POST'])
 def api_tambah_so():
     """API untuk menambah data SO - OPTIMIZED"""
+    session_id = get_session_id()
     data = request.get_json()
-    kode = data['kode_barang']  # Already validated by frontend
+    kode = data['kode_barang']
     stok_real = data['stok_real']
     nama_barang = data['nama_barang']
     nama_area = data['nama_area']
     
     # Quick duplicate check
+    so_data = get_so_data(session_id)
     for item in so_data:
         if item['kode_barang'] == kode:
             return jsonify({'success': False, 'message': f'Duplikat kode {kode}'}), 400
     
-    # Append directly
-    so_data.append({
-        'kode_barang': kode,
-        'nama_barang': nama_barang,
-        'stok_real': stok_real,
-        'nama_area': nama_area
-    })
+    # Add to database
+    add_so_item(session_id, kode, nama_barang, stok_real, nama_area)
     
     return jsonify({'success': True}), 200
 
 @app.route('/api/daftar-so')
 def api_daftar_so():
     """API untuk mendapatkan daftar SO"""
+    session_id = get_session_id()
+    so_data = get_so_data(session_id)
     return jsonify(so_data)
 
 @app.route('/api/share-whatsapp', methods=['POST'])
 def api_share_whatsapp():
     """API untuk generate WhatsApp share link"""
+    session_id = get_session_id()
+    so_data = get_so_data(session_id)
+    
     if not so_data:
         return jsonify({'success': False, 'message': 'Tidak ada data untuk dibagikan'}), 400
     
@@ -191,26 +265,28 @@ def api_share_whatsapp():
         'pesan': pesan
     })
 
-@app.route('/api/hapus-so/<int:index>', methods=['DELETE'])
-def api_hapus_so(index):
+@app.route('/api/hapus-so/<int:item_id>', methods=['DELETE'])
+def api_hapus_so(item_id):
     """API untuk menghapus data SO"""
-    global so_data
+    session_id = get_session_id()
     
-    if 0 <= index < len(so_data):
-        so_data.pop(index)
+    try:
+        delete_so_item(session_id, item_id)
+        so_data = get_so_data(session_id)
         return jsonify({'success': True, 'data': so_data})
-    else:
-        return jsonify({'success': False, 'message': 'Index tidak valid'}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
 
 @app.route('/api/reset-so', methods=['POST'])
 def api_reset_so():
     """API untuk reset semua data SO"""
-    global so_data
-    so_data = []
+    session_id = get_session_id()
+    reset_so_data(session_id)
     return jsonify({'success': True, 'message': 'Data SO direset'})
 
-def buat_excel_so():
+def buat_excel_so(session_id):
     """Helper function untuk membuat Excel SO"""
+    so_data = get_so_data(session_id)
     # Ambil nama area dari data pertama (semua sama area)
     nama_area = so_data[0].get('nama_area', 'Tidak Ditentukan') if so_data else 'Tidak Ditentukan'
     
@@ -262,10 +338,13 @@ def buat_excel_so():
 @app.route('/api/export-excel', methods=['POST'])
 def api_export_excel():
     """API untuk export data SO ke Excel"""
+    session_id = get_session_id()
+    so_data = get_so_data(session_id)
+    
     if not so_data:
         return jsonify({'success': False, 'message': 'Tidak ada data untuk diekspor'}), 400
     
-    filepath, filename, _ = buat_excel_so()
+    filepath, filename, _ = buat_excel_so(session_id)
     return send_file(filepath, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 @app.route('/api/download-file/<filename>', methods=['GET'])
@@ -293,10 +372,13 @@ def api_download_file(filename):
 @app.route('/api/share-excel-whatsapp', methods=['POST'])
 def api_share_excel_whatsapp():
     """API untuk share Excel ke WhatsApp dengan nomor tertentu"""
+    session_id = get_session_id()
+    so_data = get_so_data(session_id)
+    
     if not so_data:
         return jsonify({'success': False, 'message': 'Tidak ada data untuk dibagikan'}), 400
     
-    filepath, filename, nama_area = buat_excel_so()
+    filepath, filename, nama_area = buat_excel_so(session_id)
     
     # Format nomor WhatsApp (remove semua karakter non-digit)
     nomor_wa = request.get_json().get('nomor', '+62 851-1731-0261')
