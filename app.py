@@ -27,12 +27,16 @@ def init_db():
         os.makedirs(os.path.dirname(DB_FILE) or '.', exist_ok=True)
         conn = sqlite3.connect(DB_FILE)
         c = conn.cursor()
+        
+        # Tabel sessions
         c.execute('''CREATE TABLE IF NOT EXISTS so_sessions (
             id TEXT PRIMARY KEY,
             nama_area TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )''')
+        
+        # Tabel items
         c.execute('''CREATE TABLE IF NOT EXISTS so_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             session_id TEXT,
@@ -43,6 +47,29 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(session_id) REFERENCES so_sessions(id)
         )''')
+        
+        # Tabel master barang
+        c.execute('''CREATE TABLE IF NOT EXISTS master_barang (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            kode TEXT UNIQUE NOT NULL,
+            nama TEXT NOT NULL,
+            kategori TEXT,
+            departemen TEXT,
+            stok INTEGER DEFAULT 0,
+            satuan TEXT DEFAULT 'Unit',
+            hjual REAL,
+            hpp REAL,
+            margin REAL,
+            expdate TEXT,
+            status_promo TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+        
+        # Create indexes
+        c.execute('''CREATE INDEX IF NOT EXISTS idx_kode ON master_barang(kode)''')
+        c.execute('''CREATE INDEX IF NOT EXISTS idx_session_kode ON so_items(session_id, kode_barang)''')
+        
         conn.commit()
         conn.close()
         DB_ENABLED = True
